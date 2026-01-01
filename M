@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Block Blast Game</title>
+<style>
+  body { font-family: sans-serif; text-align: center; margin: 0; background:#f5f5f5; }
+  #game { display:flex; flex-direction:column; align-items:center; margin-top:20px; }
+  #score { font-size:24px; margin-bottom:10px; }
+  #board { display:grid; grid-template-columns:repeat(10,30px); grid-template-rows:repeat(10,30px); gap:2px; margin-bottom:20px; }
+  .square { width:30px; height:30px; background:#e0e0e0; border-radius:5px; }
+  .filled { background:#4caf50; }
+  #pieces { display:flex; gap:10px; justify-content:center; margin-bottom:10px; }
+  .piece { width:60px; height:60px; background:#2196f3; border-radius:5px; display:flex; flex-wrap:wrap; align-content:flex-start; cursor:grab; }
+  .piece div { width:20px; height:20px; margin:1px; background:#ffeb3b; border-radius:2px; }
+  button { padding:10px 20px; font-size:16px; cursor:pointer; border:none; border-radius:5px; background:#f44336; color:white; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="score">Score: 0</div>
+  <div id="board"></div>
+  <div id="pieces"></div>
+  <button id="restart">Restart</button>
+</div>
+
+<script>
+const board = document.getElementById("board");
+const piecesDiv = document.getElementById("pieces");
+const scoreDisplay = document.getElementById("score");
+const restartBtn = document.getElementById("restart");
+let score = 0;
+
+// Create 10x10 board
+for (let i = 0; i < 100; i++) {
+  const square = document.createElement("div");
+  square.classList.add("square");
+  square.dataset.index = i;
+  board.appendChild(square);
+}
+
+// Shapes: array of positions relative to top-left
+const shapes = [
+  [[0,0],[1,0],[2,0]],        // horizontal 3
+  [[0,0],[0,1],[1,0],[1,1]],  // 2x2
+  [[0,0],[0,1],[0,2]],        // vertical 3
+  [[0,0],[1,0],[2,0],[2,1]],  // L-shape
+  [[0,0],[1,0],[1,1]]         // small L
+];
+
+// Generate 3 random pieces
+function randomShapes() {
+  piecesDiv.innerHTML = "";
+  for (let i = 0; i < 3; i++) {
+    const shape = shapes[Math.floor(Math.random()*shapes.length)];
+    const piece = document.createElement("div");
+    piece.classList.add("piece");
+    piece.dataset.shape = JSON.stringify(shape);
+    shape.forEach(pos => {
+      const block = document.createElement("div");
+      piece.appendChild(block);
+    });
+    piece.draggable = true;
+    piece.addEventListener("dragstart", dragStart);
+    piecesDiv.appendChild(piece);
+  }
+}
+
+function dragStart(e) {
+  e.dataTransfer.setData("text/plain", e.target.dataset.shape);
+}
+
+board.addEventListener("dragover", e => e.preventDefault());
+board.addEventListener("drop", e => {
+  const shape = JSON.parse(e.dataTransfer.getData("text/plain"));
+  placeShape(shape, parseInt(e.target.dataset.index));
+});
+
+function placeShape(shape, start) {
+  let canPlace = true;
+  shape.forEach(([x,y]) => {
+    const idx = start + x + y*10;
+    const square = board.children[idx];
+    if (!square || square.classList.contains("filled")) canPlace=false;
+  });
+  if(!canPlace) return;
+
+  shape.forEach(([x,y]) => {
+    const idx = start + x + y*10;
+    board.children[idx].classList.add("filled");
+  });
+
+  score += shape.length*10;
+  scoreDisplay.textContent = `Score: ${score}`;
+
+  clearLines();
+  randomShapes();
+}
+
+function clearLines() {
+  for(let r=0; r<10; r++){
+    let rowFull = true;
+    for(let c=0; c<10; c++){
+      if(!board.children[r*10+c].classList.contains("filled")) rowFull=false;
+    }
+    if(rowFull){
+      for(let c=0;c<10;c++) board.children[r*10+c].classList.remove("filled");
+      score += 100;
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+  }
+  for(let c=0; c<10; c++){
+    let colFull = true;
+    for(let r=0;r<10;r++){
+      if(!board.children[r*10+c].classList.contains("filled")) colFull=false;
+    }
+    if(colFull){
+      for(let r=0;r<10;r++) board.children[r*10+c].classList.remove("filled");
+      score += 100;
+      scoreDisplay.textContent = `Score: ${score}`;
+    }
+  }
+}
+
+// Restart
+restartBtn.addEventListener("click", () => {
+  for(let sq of board.children) sq.classList.remove("filled");
+  score = 0;
+  scoreDisplay.textContent = `Score: ${score}`;
+  randomShapes();
+});
+
+// Start first pieces
+randomShapes();
+</script>
+</body>
+</html>
